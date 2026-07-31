@@ -1,10 +1,8 @@
 import garmin from 'garmin-connect';
+import { getDb, intEnv, maxValue, requireEnv, writeRaw } from '../lake.js';
 
-const { GarminConnect } = garmin;
+const { GarminConnect } = garmin; // CommonJS package — no named ESM exports
 type GarminClient = InstanceType<typeof GarminConnect>;
-import { intEnv, requireEnv } from '../config.js';
-import { writeRaw } from '../raw.js';
-import { getDb, maxValue } from '../db.js';
 
 const HINT = 'Set GARMIN_USERNAME and GARMIN_PASSWORD in .env (your normal Garmin Connect login).';
 

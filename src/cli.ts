@@ -1,4 +1,4 @@
-import { getDb } from './db.js';
+import { getDb } from './lake.js';
 import { syncStrava } from './connectors/strava.js';
 import { syncGarmin } from './connectors/garmin.js';
 import { syncGmail } from './connectors/gmail.js';
@@ -42,9 +42,8 @@ async function status(): Promise<void> {
   const db = await getDb();
   const tables = ['strava_activities', 'garmin_activities', 'garmin_daily', 'garmin_sleep', 'emails'];
   for (const t of tables) {
-    const reader = await db.runAndReadAll(`SELECT count(*) AS n, max(1) FROM ${t}`);
-    const n = reader.getRowObjects()[0]?.n;
-    console.log(`${t.padEnd(20)} ${n} rows`);
+    const reader = await db.runAndReadAll(`SELECT count(*) AS n FROM ${t}`);
+    console.log(`${t.padEnd(20)} ${reader.getRowObjects()[0]?.n} rows`);
   }
 }
 
