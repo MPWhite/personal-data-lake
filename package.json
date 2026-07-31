@@ -1,0 +1,25 @@
+{
+  "name": "personal-data-lake",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "tsx src/cli.ts sync",
+    "query": "tsx src/cli.ts query",
+    "status": "tsx src/cli.ts status",
+    "auth:strava": "tsx scripts/strava-auth.ts",
+    "auth:gmail": "tsx scripts/gmail-auth.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "1.5.5-r.3",
+    "dotenv": "^16.4.5",
+    "garmin-connect": "^1.6.2",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

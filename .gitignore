@@ -1,0 +1,9 @@
+# secrets
+.env
+
+# the lake itself — data never goes in git
+data/
+
+node_modules/
+dist/
+*.log
