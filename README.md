@@ -1,66 +1,71 @@
 # Personal Data Lake
 
-A local-first data lake for personal data: Garmin, Strava, and Gmail, all in TypeScript.
-
-## Architecture
-
-```
-                 ┌─────────────────────────────────────────────┐
-  APIs           │  data/raw/<source>/<date>/*.json            │   RAW ZONE
-  Garmin ──────▶ │  untouched API responses, append-only.      │   (source of truth,
-  Strava ──────▶ │  Never edited — tables can always be        │    rebuildable)
-  Gmail  ──────▶ │  rebuilt from these files.                  │
-                 └──────────────────┬──────────────────────────┘
-                                    │ typed upserts
-                 ┌──────────────────▼──────────────────────────┐
-                 │  data/lake/lake.duckdb                      │   QUERY ZONE
-                 │  strava_activities, garmin_activities,      │   (clean tables,
-                 │  garmin_daily, garmin_sleep, emails         │    ask anything in SQL)
-                 └─────────────────────────────────────────────┘
-```
-
-Key ideas (standard data-lake practice, scaled to one person):
-
-- **Raw zone first.** Every sync lands the exact API response as timestamped JSON before anything else happens. If a schema decision turns out wrong later, delete the DuckDB file and rebuild — the raw files are never touched.
-- **Incremental syncs.** Each connector asks the lake "what's the newest record I have?" and only fetches newer data. Syncs are idempotent (`INSERT OR REPLACE`), so re-running is always safe.
-- **One query engine.** [DuckDB](https://duckdb.org) is a single-file analytical database — no server to run. Each row also keeps the full original record in a `raw` JSON column, so fields not promoted to real columns are still queryable with `raw->>'$.field'`.
-
-## Setup
+All my personal data — Garmin, Strava, Gmail — pulled into one place I can query with SQL. Local-first, TypeScript, no servers.
 
 ```sh
 npm install
-cp .env.example .env
+cp .env.example .env    # fill in credentials (see Setup)
+npm run sync            # pull new data from every configured source
+npm run query -- "SELECT sport_type, count(*) FROM strava_activities GROUP BY 1"
 ```
 
-Then fill in credentials per source (each is optional — sync only what's configured):
+## How it works
+
+Two layers, that's the whole design:
+
+```
+                 ┌────────────────────────────────────┐
+  Garmin ──────▶ │  data/raw/<source>/<date>/*.json   │  RAW ZONE
+  Strava ──────▶ │  untouched API responses,          │  append-only,
+  Gmail  ──────▶ │  written before anything else      │  never edited
+                 └─────────────────┬──────────────────┘
+                                   │ typed upserts
+                 ┌─────────────────▼──────────────────┐
+                 │  data/lake/lake.duckdb             │  QUERY ZONE
+                 │  clean SQL tables                  │  rebuildable
+                 └────────────────────────────────────┘
+```
+
+- **Raw zone first.** Every sync lands the exact API response as timestamped JSON before touching the database. Wrong schema decision later? Delete `lake.duckdb` and rebuild — the raw files are the permanent source of truth.
+- **Incremental + idempotent.** Each connector asks the lake "what's the newest record I have?" and fetches only newer data, upserting with `INSERT OR REPLACE`. Re-running `sync` is always safe.
+- **One query engine.** [DuckDB](https://duckdb.org) is a single-file analytical database. Fields not promoted to real columns live in each row's `raw` JSON column: `raw->>'$.some_field'`. You can also open the lake with any DuckDB client: `duckdb data/lake/lake.duckdb`.
+
+## The code
+
+Five files. Read them in this order and you know the entire system:
+
+```
+src/lake.ts             the storage layer: paths, raw-zone writer, DuckDB schema + connection
+src/connectors/*.ts     one per source, all the same shape: fetch → writeRaw() → upsert
+src/cli.ts              entrypoint: sync / query / status
+scripts/*-auth.ts       one-time OAuth flows that print the refresh token for .env
+```
+
+Tables: `strava_activities`, `garmin_activities`, `garmin_daily` (steps, resting HR), `garmin_sleep`, `emails`. Schema is in `src/lake.ts`.
+
+## Setup
+
+Each source is independent — configure only what you want, in `.env`:
 
 | Source | Steps |
 |---|---|
-| **Strava** | Create an API app at [strava.com/settings/api](https://www.strava.com/settings/api) (callback domain: `localhost`), put client id/secret in `.env`, run `npm run auth:strava` |
-| **Garmin** | Put your normal Garmin Connect username/password in `.env` (uses the unofficial API) |
-| **Gmail** | Create a Google Cloud project, enable the Gmail API, create OAuth **Desktop app** credentials, put client id/secret in `.env`, run `npm run auth:gmail` |
+| **Garmin** | Your normal Garmin Connect username/password (unofficial API, no dev account needed) |
+| **Strava** | Create an API app at [strava.com/settings/api](https://www.strava.com/settings/api) (callback domain `localhost`), add client id/secret to `.env`, run `npm run auth:strava` |
+| **Gmail** | Google Cloud project → enable Gmail API → OAuth **Desktop app** credentials → add to `.env`, run `npm run auth:gmail` |
 
-## Usage
+First Gmail/Garmin sync backfills 30 days (`GMAIL_BACKFILL_DAYS` / `GARMIN_BACKFILL_DAYS`); Strava backfills everything.
+
+## Commands
 
 ```sh
-npm run sync              # sync all configured sources
-npm run sync strava       # or one source: strava | garmin | gmail
-npm run status            # row counts per table
-npm run query -- "SELECT sport_type, count(*), round(sum(distance_m)/1000) AS km
-                  FROM strava_activities GROUP BY 1 ORDER BY 3 DESC"
+npm run sync [strava|garmin|gmail]   # sync one source, or all if omitted
+npm run status                       # row counts per table
+npm run query -- "SELECT ..."        # run SQL against the lake
 ```
 
-You can also open the lake directly with the DuckDB CLI or any DuckDB client: `duckdb data/lake/lake.duckdb`.
+## Adding a source
 
-## Tables
+1. `src/connectors/<source>.ts` — export a `sync` function: fetch incrementally → `writeRaw()` → upsert into a table you add to `SCHEMA` in `src/lake.ts`.
+2. Add it to the `SOURCES` map in `src/cli.ts`.
 
-- `strava_activities` — one row per activity (distance, times, HR, watts, + full `raw`)
-- `garmin_activities` — one row per Garmin activity
-- `garmin_daily` — one row per day: steps, resting HR
-- `garmin_sleep` — one row per night: stage durations, sleep score
-- `emails` — one row per message: headers, labels, snippet, plain-text body
-
-## Adding a new source
-
-1. Create `src/connectors/<source>.ts` exporting `sync<Source>()` that: fetches incrementally → `writeRaw(...)` → upserts into a table defined in `src/db.ts`.
-2. Register it in the `SOURCES` map in `src/cli.ts`.
+That's it — no registration, no config files.
