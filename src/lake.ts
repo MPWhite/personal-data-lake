@@ -83,13 +83,10 @@ CREATE TABLE IF NOT EXISTS garmin_sleep (
 );
 
 CREATE TABLE IF NOT EXISTS screentime_app_usage (
-  date          DATE,
-  device        VARCHAR,
-  app           VARCHAR,
-  category      VARCHAR,
-  usage_s       INTEGER,
-  pickups       INTEGER,
-  notifications INTEGER,
+  date    DATE,
+  device  VARCHAR,
+  app     VARCHAR,
+  usage_s INTEGER,
   PRIMARY KEY (date, device, app)
 );
 
