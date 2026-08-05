@@ -1,6 +1,6 @@
 # Personal Data Lake
 
-All my personal data — Garmin, Strava, Gmail — pulled into one place I can query with SQL. Local-first, TypeScript, no servers.
+All my personal data — Garmin, Strava, Gmail, iPhone/Mac Screen Time — pulled into one place I can query with SQL. Local-first, TypeScript, no servers.
 
 ```sh
 npm install
@@ -16,8 +16,9 @@ Two layers, that's the whole design:
 ```
                  ┌────────────────────────────────────┐
   Garmin ──────▶ │  data/raw/<source>/<date>/*.json   │  RAW ZONE
-  Strava ──────▶ │  untouched API responses,          │  append-only,
-  Gmail  ──────▶ │  written before anything else      │  never edited
+  Strava ──────▶ │  untouched source payloads,        │  append-only,
+  Gmail ───────▶ │  written before anything else      │  never edited
+  Screen Time ─▶ │                                    │
                  └─────────────────┬──────────────────┘
                                    │ typed upserts
                  ┌─────────────────▼──────────────────┐
@@ -26,7 +27,7 @@ Two layers, that's the whole design:
                  └────────────────────────────────────┘
 ```
 
-- **Raw zone first.** Every sync lands the exact API response as timestamped JSON before touching the database. Wrong schema decision later? Delete `lake.duckdb` and rebuild — the raw files are the permanent source of truth.
+- **Raw zone first.** Every sync lands the exact source payload as timestamped JSON before touching the database. Wrong schema decision later? Delete `lake.duckdb` and rebuild — the raw files are the permanent source of truth.
 - **Incremental + idempotent.** Each connector asks the lake "what's the newest record I have?" and fetches only newer data, upserting with `INSERT OR REPLACE`. Re-running `sync` is always safe.
 - **One query engine.** [DuckDB](https://duckdb.org) is a single-file analytical database. Fields not promoted to real columns live in each row's `raw` JSON column: `raw->>'$.some_field'`. You can also open the lake with any DuckDB client: `duckdb data/lake/lake.duckdb`.
 
@@ -43,7 +44,7 @@ src/cli.ts              entrypoint: sync / query / status / text
 scripts/*-auth.ts       one-time OAuth flows that print the refresh token for .env
 ```
 
-Tables: `strava_activities`, `garmin_activities`, `garmin_daily` (steps, resting HR), `garmin_sleep`, `emails`. Schema is in `src/lake.ts`.
+Tables: `strava_activities`, `garmin_activities`, `garmin_daily` (steps, resting HR), `garmin_sleep`, `screentime_app_usage` (per-app seconds/pickups per day per device), `emails`. Schema is in `src/lake.ts`.
 
 ## Setup
 
@@ -54,13 +55,14 @@ Each source is independent — configure only what you want, in `.env`:
 | **Garmin** | Your normal Garmin Connect username/password (unofficial API, no dev account needed) |
 | **Strava** | Create an API app at [strava.com/settings/api](https://www.strava.com/settings/api) (callback domain `localhost`), add client id/secret to `.env`, run `npm run auth:strava` |
 | **Gmail** | Google Cloud project → enable Gmail API → OAuth **Desktop app** credentials → add to `.env`, run `npm run auth:gmail` |
+| **Screen Time** | No credentials — reads the Mac's local Screen Time database (Apple has no export API). Turn on Screen Time **Share Across Devices** (iPhone: Settings → Screen Time; Mac: System Settings → Screen Time) and grant **Full Disk Access** to the app that runs `npm run sync` (System Settings → Privacy & Security). Apple only keeps a few weeks of fine-grained history, so sync at least weekly — the lake is the archive. |
 
 First Gmail/Garmin sync backfills 30 days (`GMAIL_BACKFILL_DAYS` / `GARMIN_BACKFILL_DAYS`); Strava backfills everything.
 
 ## Commands
 
 ```sh
-npm run sync [strava|garmin|gmail]   # sync one source, or all if omitted
+npm run sync [strava|garmin|gmail|screentime]   # sync one source, or all if omitted
 npm run status                       # row counts per table
 npm run query -- "SELECT ..."        # run SQL against the lake
 npm run text -- "message"            # text yourself via Linq (iMessage)

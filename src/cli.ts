@@ -2,12 +2,14 @@ import { getDb } from './lake.js';
 import { syncStrava } from './connectors/strava.js';
 import { syncGarmin } from './connectors/garmin.js';
 import { syncGmail } from './connectors/gmail.js';
+import { syncScreentime } from './connectors/screentime.js';
 import { sendText } from './messaging/linq.js';
 
 const SOURCES: Record<string, () => Promise<void>> = {
   strava: syncStrava,
   garmin: syncGarmin,
   gmail: syncGmail,
+  screentime: syncScreentime,
 };
 
 async function sync(target: string): Promise<void> {
@@ -41,7 +43,7 @@ async function query(sql: string): Promise<void> {
 
 async function status(): Promise<void> {
   const db = await getDb();
-  const tables = ['strava_activities', 'garmin_activities', 'garmin_daily', 'garmin_sleep', 'emails'];
+  const tables = ['strava_activities', 'garmin_activities', 'garmin_daily', 'garmin_sleep', 'screentime_app_usage', 'emails'];
   for (const t of tables) {
     const reader = await db.runAndReadAll(`SELECT count(*) AS n FROM ${t}`);
     console.log(`${t.padEnd(20)} ${reader.getRowObjects()[0]?.n} rows`);
@@ -74,7 +76,7 @@ switch (command) {
   }
   default:
     console.log(`Usage:
-  npm run sync [strava|garmin|gmail|all]   incrementally sync sources into the lake
+  npm run sync [strava|garmin|gmail|screentime|all]   incrementally sync sources into the lake
   npm run query -- "SELECT ..."            run SQL against the lake
   npm run status                           row counts per table
   npm run text -- "message"                text yourself via Linq (iMessage)`);

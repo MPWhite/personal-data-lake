@@ -82,6 +82,17 @@ CREATE TABLE IF NOT EXISTS garmin_sleep (
   raw     JSON
 );
 
+CREATE TABLE IF NOT EXISTS screentime_app_usage (
+  date          DATE,
+  device        VARCHAR,
+  app           VARCHAR,
+  category      VARCHAR,
+  usage_s       INTEGER,
+  pickups       INTEGER,
+  notifications INTEGER,
+  PRIMARY KEY (date, device, app)
+);
+
 CREATE TABLE IF NOT EXISTS emails (
   id        VARCHAR PRIMARY KEY,
   thread_id VARCHAR,
