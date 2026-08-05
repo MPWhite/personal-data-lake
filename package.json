@@ -7,12 +7,14 @@
     "sync": "tsx src/cli.ts sync",
     "query": "tsx src/cli.ts query",
     "status": "tsx src/cli.ts status",
+    "text": "tsx src/cli.ts text",
     "auth:strava": "tsx scripts/strava-auth.ts",
     "auth:gmail": "tsx scripts/gmail-auth.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@duckdb/node-api": "1.5.5-r.3",
+    "@linqapp/sdk": "^0.33.1",
     "dotenv": "^16.4.5",
     "garmin-connect": "^1.6.2",
     "googleapis": "^144.0.0"
