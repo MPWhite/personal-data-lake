@@ -1,4 +1,5 @@
-import { getDb, maxValue, requireEnv, writeRaw } from '../lake.js';
+import { requireEnv } from '../env.js';
+import { getDb, maxValue, writeRaw } from '../lake.js';
 
 const HINT = 'Set up a Strava API app at https://www.strava.com/settings/api, put the client id/secret in .env, then run `npm run auth:strava`.';
 

@@ -1,15 +1,14 @@
 /**
- * The lake itself: file paths, env helpers, the raw zone, and the DuckDB
- * query zone. This file is the whole storage layer — everything else is
- * either a connector (fetch → writeRaw → upsert) or the CLI.
+ * The lake itself: file paths, the raw zone, and the DuckDB query zone.
+ * This file is the whole storage layer — everything else is either a
+ * connector (fetch → writeRaw → upsert) or the CLI.
  */
-import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DuckDBInstance, DuckDBConnection } from '@duckdb/node-api';
 
-// ── paths & env ──────────────────────────────────────────────
+// ── paths ────────────────────────────────────────────────────
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -17,21 +16,6 @@ export const paths = {
   raw: path.join(root, 'data', 'raw'),
   db: path.join(root, 'data', 'lake', 'lake.duckdb'),
 };
-
-export function env(name: string): string | undefined {
-  return process.env[name] || undefined;
-}
-
-export function intEnv(name: string, fallback: number): number {
-  const v = env(name);
-  return v ? Number.parseInt(v, 10) : fallback;
-}
-
-export function requireEnv(names: string[], hint: string): Record<string, string> {
-  const missing = names.filter((n) => !env(n));
-  if (missing.length > 0) throw new Error(`Missing env vars: ${missing.join(', ')}. ${hint}`);
-  return Object.fromEntries(names.map((n) => [n, env(n)!]));
-}
 
 // ── raw zone ─────────────────────────────────────────────────
 

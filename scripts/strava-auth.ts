@@ -4,7 +4,7 @@
  * Strava API app's "Authorization Callback Domain" set to "localhost".
  */
 import http from 'node:http';
-import { requireEnv } from '../src/lake.js';
+import { requireEnv } from '../src/env.js';
 
 const PORT = 8723;
 const { STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET } = requireEnv(

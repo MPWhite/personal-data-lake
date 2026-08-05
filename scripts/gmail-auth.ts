@@ -5,7 +5,7 @@
  */
 import http from 'node:http';
 import { google } from 'googleapis';
-import { requireEnv } from '../src/lake.js';
+import { requireEnv } from '../src/env.js';
 
 const PORT = 8724;
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = requireEnv(

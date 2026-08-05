@@ -1,5 +1,6 @@
 import garmin from 'garmin-connect';
-import { getDb, intEnv, maxValue, requireEnv, writeRaw } from '../lake.js';
+import { intEnv, requireEnv } from '../env.js';
+import { getDb, maxValue, writeRaw } from '../lake.js';
 
 const { GarminConnect } = garmin; // CommonJS package — no named ESM exports
 type GarminClient = InstanceType<typeof GarminConnect>;

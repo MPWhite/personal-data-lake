@@ -1,5 +1,6 @@
 import { google, gmail_v1 } from 'googleapis';
-import { env, getDb, intEnv, maxValue, requireEnv, writeRaw } from '../lake.js';
+import { env, intEnv, requireEnv } from '../env.js';
+import { getDb, maxValue, writeRaw } from '../lake.js';
 
 const HINT =
   'Create OAuth "Desktop app" credentials at https://console.cloud.google.com/apis/credentials, enable the Gmail API, set GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET in .env, then run `npm run auth:gmail`.';
