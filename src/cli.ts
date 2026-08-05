@@ -2,6 +2,7 @@ import { getDb } from './lake.js';
 import { syncStrava } from './connectors/strava.js';
 import { syncGarmin } from './connectors/garmin.js';
 import { syncGmail } from './connectors/gmail.js';
+import { sendText } from './messaging/linq.js';
 
 const SOURCES: Record<string, () => Promise<void>> = {
   strava: syncStrava,
@@ -62,9 +63,19 @@ switch (command) {
   case 'status':
     await status();
     break;
+  case 'text': {
+    if (!arg) {
+      console.error('Usage: npm run text -- "message"');
+      process.exit(1);
+    }
+    const sent = await sendText(arg);
+    console.log(`sent (${sent.status}) — chat ${sent.chatId}`);
+    break;
+  }
   default:
     console.log(`Usage:
   npm run sync [strava|garmin|gmail|all]   incrementally sync sources into the lake
   npm run query -- "SELECT ..."            run SQL against the lake
-  npm run status                           row counts per table`);
+  npm run status                           row counts per table
+  npm run text -- "message"                text yourself via Linq (iMessage)`);
 }
